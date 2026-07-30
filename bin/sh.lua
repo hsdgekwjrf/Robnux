@@ -16,7 +16,11 @@ function cmd_runner(cmd,args)
     if cmd == "clear" then
         system.clear()
     elseif cmd == "echo" then
-        system.print(args[1])
+        local str = ""
+        for i, value in ipairs(args) do
+            str = str .. value .. " "
+        end
+        system.print(str.."\n")
     else
         local return_v = system.exec("rootfs/bin/"..cmd,args)
         if return_v == -1 then
