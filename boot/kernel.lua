@@ -5,8 +5,8 @@ By BSEG
      *
      /\
     / .\
-   /   ==>
-  /      \
+   /   ==>  ,
+--/      \--O
  /        \
  ----------
    |    |
@@ -158,7 +158,14 @@ function kernel.filesystem(cmd,arg)
 		return script
 		
 	elseif cmd == "lsdir" then
-		local _tmp = kernel.fs_to_path(arg):GetChildren()
+		local _tmp = {}
+		local return_v = pcall(function()
+			_tmp = kernel.fs_to_path(arg):GetChildren()
+		end)
+		if return_v == false then
+			return -1
+		end
+
 		--print(_tmp)
 		local __tmp = {}
 		for i,value in pairs(_tmp) do

@@ -27,10 +27,34 @@ function cmd_runner(cmd,args)
             path = args[1]
         end
         local txts = system.syscall("fs_lsdir",path)
-        for _, txt in ipairs(txts) do
-            system.print(txt .. " ")
+
+
+        if txts == -1 then
+            system.print("Directory not found: ".. path .."\n")
+        else
+            for _, txt in ipairs(txts) do
+                system.print(txt .. " ")
+            end
+            system.print("\n")
         end
-        system.print("\n")
+    elseif cmd == "cd" then
+
+        local cd_tmp = sh_spawn
+
+        if args[1] == nil then
+            system.print("cd [DIR] \n ")
+        else
+            sh_spawn = sh_spawn .. args[1]
+        end
+        if system.syscall("fs_lsdir",sh_spawn) == -1 then
+            system.print("Directory not found: ".. args[1] .."\n")
+            sh_spawn = cd_tmp
+        end
+
+        local cd_tmp2 = system.syscall("fs_to_path",sh_spawn)
+        sh_spawn = system.syscall("fs_get_path",cd_tmp2)
+    elseif cmd == "exit" or cmd == "quit" then
+        return -1
     else
         local return_v = system.exec("rootfs/bin/"..cmd,args)
         if return_v == -1 then
@@ -40,9 +64,10 @@ function cmd_runner(cmd,args)
             end
         end
     end
+    return 0
 end
 
-local ver = "0.1.0 ,alpha.1"
+local ver = "0.1.0 ,alpha.2"
 
 function sh.main(_system)
     system = _system
@@ -59,7 +84,10 @@ function sh.main(_system)
                 table.insert(args,value)
             end
         end
-        cmd_runner(cmd_table[1], args)
+        local result = cmd_runner(cmd_table[1], args)
+        if result == -1 then
+            break
+        end
     end
     
 end
