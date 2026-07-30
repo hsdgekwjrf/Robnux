@@ -3,7 +3,7 @@ system = nil
 
 local sh_spawn = "rootfs/"
 
-function cmd_slove(str)
+function cmd_solve(str)
 
     local cmd_tmp = {}
 	string.gsub(str,'[^ ]+',function(tmp1) 
@@ -35,10 +35,10 @@ function sh.main(_system)
     system.print("BSEG Shell version".. ver .."\n")
     while true do
         local sh_command = ""
-        system.print("$ ")
+        system.print(sh_spawn .." $ ")
         sh_command = system.input()
         local cmd_table = {}
-        cmd_table = cmd_slove(sh_command)
+        cmd_table = cmd_solve(sh_command)
         local args = {}
         for i, value in ipairs(cmd_table) do
             if i > 1 then
