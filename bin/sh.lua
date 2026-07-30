@@ -1,7 +1,7 @@
 sh = {}
 system = nil
 
-local sh_spawn = "rootfs/"
+local sh_spawn = "rootfs"
 
 function cmd_solve(str)
 
@@ -44,7 +44,7 @@ function cmd_runner(cmd,args)
         if args[1] == nil then
             system.print("cd [DIR] \n ")
         else
-            sh_spawn = sh_spawn .. args[1]
+            sh_spawn = sh_spawn .. "/" .. args[1]
         end
         if system.syscall("fs_lsdir",sh_spawn) == -1 then
             system.print("Directory not found: ".. args[1] .."\n")
@@ -58,7 +58,7 @@ function cmd_runner(cmd,args)
     else
         local return_v = system.exec("rootfs/bin/"..cmd,args)
         if return_v == -1 then
-            local return_v2 = system.exec(sh_spawn .. cmd,args)
+            local return_v2 = system.exec(sh_spawn .. "/" .. cmd,args)
             if return_v2 == -1 then
                 system.print("No such file or command: ".. cmd .."\n")
             end
