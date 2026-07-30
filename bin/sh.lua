@@ -21,6 +21,12 @@ function cmd_runner(cmd,args)
             str = str .. value .. " "
         end
         system.print(str.."\n")
+    elseif cmd == "ls" then
+        local path = sh_spawn
+        if args[1] ~= nil then
+            path = args[1]
+        end
+        system.syscall("fs_lsdir",path)
     else
         local return_v = system.exec("rootfs/bin/"..cmd,args)
         if return_v == -1 then
