@@ -26,7 +26,11 @@ function cmd_runner(cmd,args)
         if args[1] ~= nil then
             path = args[1]
         end
-        system.syscall("fs_lsdir",path)
+        local txts = system.syscall("fs_lsdir",path)
+        for _, txt in ipairs(txts) do
+            system.print(txt .. " ")
+        end
+        system.print("\n")
     else
         local return_v = system.exec("rootfs/bin/"..cmd,args)
         if return_v == -1 then
