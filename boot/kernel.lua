@@ -1,6 +1,6 @@
 --[[
 Robnux Kernel 
-inDev
+By BSEG
 
      *
      /\

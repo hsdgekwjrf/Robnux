@@ -38,7 +38,8 @@ function system.input(str)
 end
 
 function system.exec(path,args)
-	kernel.exec(path,args)
+	local return_v = kernel.exec(path,args)
+	return return_v
 end
 function system.create_process(path,args)
 	kernel.create_process(path,args)
