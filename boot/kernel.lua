@@ -39,7 +39,7 @@ function kernel.dev(cmd,arg)
 		kernel.keyboard_textBox.Text = ""
 		kernel.syscall("dev_output",tmp1)
 		return tmp1
-		
+
 	end
 	if cmd == "output" then
 		kernel.screen_textLabel.Text = kernel.screen_textLabel.Text .. arg
@@ -57,7 +57,7 @@ function kernel.fs_get_path(real_path) -- return os path
 		end
 		table.insert(path_tmp,1,real_path.Name)
 		real_path = real_path.Parent
-		
+
 	end
 	if real_path == nil then
 		return nil
@@ -72,11 +72,19 @@ function kernel.exec(path,args)
 	local success,err = pcall(function()
 		local r_path = kernel.fs_to_path(path)
 		local __exec = require(r_path)
-		__exec.main(args,system)
+		if args == nil then
+			__exec.main(system)
+		else
+			__exec.main(system,args)
+		end
+		
 	end)
 	if not success then
-		return -1
+		return -1,err
+	else
+		return 0,"success"
 	end
+	
 end
 
 function kernel.fs_to_path(kernel_path) -- return roblox path
@@ -149,14 +157,14 @@ function kernel.filesystem(cmd,arg)
 	elseif cmd == "write_add" then
 		local script = kernel.fs_to_path(arg[1]).Source
 		kernel.fs_to_path(arg[1]).Source = script..arg[2]
-		
+
 	elseif cmd == "write" then
 		kernel.fs_to_path(arg[1]).Source = arg[2]
-		
+
 	elseif cmd == "read" then
 		local script = kernel.fs_to_path(arg).Source
 		return script
-		
+
 	elseif cmd == "lsdir" then
 		local _tmp = {}
 		local return_v = pcall(function()
@@ -172,6 +180,8 @@ function kernel.filesystem(cmd,arg)
 			table.insert(__tmp,value.Name)
 		end
 		return __tmp
+	elseif cmd == "getminpath" then
+		return kernel.fs_get_path(kernel.fs_to_path(arg))
 	else
 		kernel.panic("filesystem: Bad command")
 	end
@@ -203,6 +213,8 @@ function kernel.syscall(cmd,arg)
 		return kernel.dev("getinput",arg)
 	elseif cmd == "dev_output" then
 		return kernel.dev("output",arg)
+	elseif cmd == "fs_getminpath" then
+		return kernel.filesystem("getminpath",arg)
 	else
 		return kernel.panic("Bad Syscall: \""..cmd.."\"")
 	end
@@ -213,7 +225,7 @@ function kernel.init(init_program)
 	kernel.syscall("dev_output","Loading init...\n")
 	local success,err = pcall (function()
 		local __init = require(init_program);
-		kernel.syscall("dev_clearscreen")
+		--kernel.syscall("dev_clearscreen")
 		__init.main(kernel,system)
 
 	end)
@@ -244,7 +256,7 @@ function kernel.kernel_init(screen_textLabel,keyboard_textBox,keyboard_enter,fs_
 		kernel.syscall("dev_output"," [FAILED] \n")
 		kernel.panic("Failed to load kernel.\n[ERROR] "..err)
 	end
-	kernel.syscall("dev_output","Loading library rootfs/bin/system ...")
+	kernel.syscall("dev_output","Loading library rootfs/bin/system ...\n")
 	local success,err = pcall(function()
 		local __system = require(fs_root.lib.system);
 		system = __system
