@@ -58,6 +58,7 @@ function cmd_runner(cmd,args)
 	elseif cmd == "" or cmd == " " or cmd=="\n" or cmd==nil then
 		--none
 	else
+		table.insert(args,sh_spawn)
 		local return_v,err = system.exec("rootfs/bin/"..cmd,args)
 		if return_v == -1 then
 			local return_v2,err = system.exec(sh_spawn .. "/" .. cmd,args)
