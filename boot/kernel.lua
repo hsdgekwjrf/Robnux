@@ -27,13 +27,60 @@ kernel.fs_root = nil
 kernel.enter_event = nil
 kernel.version = [[
 Made By BSEG
-Robnux Kernel 0.1.0, alpha.2
+Robnux Kernel 0.1.1, alpha.1
 Standard-Core
 ]]
 
+local drvnum = 1
+
 local pids = {
-	--{pid,process}
+	--{pid,process,name}
 }
+
+local drivers = {
+	--{type,rpath,name,id} type: string: i_txt/o_txt/i_trig/i_sw/o_sw/o_color
+}
+
+function kernel.drivers_call(d_id,tmp)
+	if tonumber(d_id) == nil then
+		return -1,"kernel.drivers_call: Bad d_id"..d_id
+	end
+	local dd = nil
+	for i,d in pairs(drivers) do
+		if d[4] == d_id then
+			dd = d
+		end
+	end
+	if dd == nil then
+		
+		return -1,"kernel.drivers_call: d_id not found: "..d_id
+	end
+	
+	if dd[1] == "i_txt" then
+		return dd[2].Text
+	elseif dd[1] == "o_txt" then
+		dd[2].Text = tmp
+		return 0
+	elseif dd[1] == "i_trig" then
+		return dd[2]:Connect()
+	elseif dd[1] == "o_sw" then
+		dd[2].Enabled = tmp
+		return 0
+	elseif dd[1] == "i_sw" then
+		return dd[2].Enabled
+	elseif dd[1] == "o_color" then
+		dd[2].Color = tmp
+		return 0
+	else
+		return -1,"kernel.drivers_call: Bad type"..dd[1]
+	end
+end
+
+function kernel.reg_driver(type,rpath,name) --efi use
+	local id = drvnum
+	table.insert(drivers,{type,rpath,name,id})
+	return id
+end
 
 local function get_new_pid()
 	local pids_table = {}
@@ -78,15 +125,13 @@ function kernel.dev(cmd,arg)
 	if cmd == "clearscreen" then
 		kernel.screen_textLabel.Text = ""
 		return 0
-	end
-	if cmd == "getinput" then
+	elseif cmd == "getinput" then
 		local tmp1 = kernel.keyboard_textBox.Text
 		kernel.keyboard_textBox.Text = ""
 		kernel.syscall("dev_output",tmp1)
 		return tmp1
 
-	end
-	if cmd == "output" then
+	elseif cmd == "output" then
 		kernel.screen_textLabel.Text = kernel.screen_textLabel.Text .. arg
 		return 0
 	end
@@ -258,13 +303,13 @@ function kernel.filesystem(cmd,arg)
 	elseif cmd == "getminpath" then
 		return kernel.fs_get_path(kernel.fs_to_path(arg))
 	else
-		kernel.panic("filesystem: Bad command")
+		kernel.panic("filesystem: Bad call")
 	end
 	return 0
 end
 
 function kernel.syscall(cmd,arg)
-	if cmd == "exec"              then return kernel.exec(arg[1],arg[2])
+	    if cmd == "exec"              then return kernel.exec(arg[1],arg[2])
 	elseif cmd == "create_process"    then return kernel.create_process(arg[1],arg[2],arg[3])
 	elseif cmd == "get_process_table" then return pids
 	elseif cmd == "kill_process"      then return kernel.kill_process(arg)
@@ -279,7 +324,8 @@ function kernel.syscall(cmd,arg)
 	elseif cmd == "dev_output"        then return kernel.dev("output",arg)
 	elseif cmd == "fs_getminpath"     then return kernel.filesystem("getminpath",arg)
 	elseif cmd == "fs_mv"             then return kernel.filesystem("mv",arg)
-	else return kernel.panic("Bad Syscall: \""..cmd.."\"")	
+	elseif cmd == "drv"               then return kernel.drivers_call(arg[1],arg[2])
+	else return -1,"Bad Syscall: \""..cmd.."\""	
 	end
 end
 
