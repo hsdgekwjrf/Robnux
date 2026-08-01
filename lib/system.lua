@@ -34,7 +34,6 @@ function system.input()
 			str = tmp_str1
 		end
 	end
-	print("input:"..str)
 	return str
 
 end
@@ -43,8 +42,8 @@ function system.exec(path,args)
 	local return_v,err = kernel.exec(path,args)
 	return return_v,err
 end
-function system.create_process(path,args)
-	kernel.create_process(path,args)
+function system.create_process(path,args,name)
+	return kernel.create_process(path,args,name)
 end
 
 function system.clear()

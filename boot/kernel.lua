@@ -26,8 +26,48 @@ kernel.keyboard_enter = nil
 kernel.fs_root = nil
 kernel.enter_event = nil
 
-local ScriptEditorService = game:GetService("ScriptEditorService")
+local pids = {
+	--{pid,process}
+}
 
+local function get_new_pid()
+	local pids_table = {}
+	for i in ipairs(pids) do
+		
+		table.insert(pids_table,pids[i][1])
+	end
+	local returnpid = 0
+	local notgot = true
+	while notgot do
+		local newpid = math.random(2,10000)
+		local tmp = true
+		for i in ipairs(pids_table) do
+			if newpid == pids_table[i] then
+				tmp = false
+				break
+			end
+		end
+		if tmp then
+			notgot = false
+			returnpid = newpid
+		end
+	end
+	return returnpid
+end
+
+local function check_process()
+	local checked_init = false
+	for i=#pids,1,-1 do
+		
+		local status = coroutine.status(pids[i][2])
+		if status == "dead" then
+			table.remove(pids,i)
+		elseif pids[i][1] == 1 then
+			checked_init = true
+		end
+	end
+	return checked_init
+end
 
 function kernel.dev(cmd,arg)
 	if cmd == "clearscreen" then
@@ -107,6 +147,7 @@ function kernel.fs_to_path(kernel_path) -- return roblox path
 			real_path = real_path
 		else
 			real_path = real_path:FindFirstChild(value)
+			
 		end
 
 	end
@@ -131,11 +172,33 @@ function kernel.rm_last(str)
 	return kernel.fs_get_path(path)
 end
 
-function kernel.create_process(path,args)
+function kernel.kill_process(pid)
+	local checked = false
+	local table_spawn = 0
+	for i in ipairs(pids) do
+		if pids[i][1] == pid then	
+			checked = true
+			table_spawn = i
+		end
+	end
+	if not checked then
+		return -1,"No Process: "..tostring(pid)
+	end
+	local v,err = pcall(coroutine.close,pids[table_spawn][2])
+	if not v then
+		return -1,err
+	end
+	return 0
+end
+
+function kernel.create_process(path,name,args)
 	local process = task.spawn(function()
 		kernel.exec(path,args)
 	end)
-	return process
+	
+	local pid = get_new_pid()
+	table.insert(pids,{pid,process,name})	
+	return {pid,process,name}
 end
 
 function kernel.filesystem(cmd,arg)
@@ -146,14 +209,13 @@ function kernel.filesystem(cmd,arg)
 		return file
 	elseif cmd == "rm" then
 		kernel.fs_to_path(arg):Remove()
+		--kernel.fs_to_path(arg).Parent = nil
 		return 0
 	elseif cmd == "mkdir" then
 		local file = Instance.new("Folder")
 		file.Name = arg
 		file.Parent = kernel.fs_to_path(arg)
 		return file
-	elseif cmd == "rmdir" then
-		kernel.fs_to_path(arg):Remove()
 	elseif cmd == "write_add" then
 		local script = kernel.fs_to_path(arg[1]).Source
 		kernel.fs_to_path(arg[1]).Source = script..arg[2]
@@ -192,7 +254,11 @@ function kernel.syscall(cmd,arg)
 	if cmd == "exec" then
 		return kernel.exec(arg[1],arg[2])
 	elseif cmd == "create_process" then
-		return kernel.create_process(arg[1],arg[2])
+		return kernel.create_process(arg[1],arg[2],arg[3])
+	elseif cmd == "get_process_table" then
+		return pids
+	elseif cmd == "kill_process" then
+		return kernel.kill_process(arg)
 	elseif cmd == "fs_mk" then
 		return kernel.filesystem("mk",arg)
 	elseif cmd == "fs_rm" then
@@ -201,8 +267,6 @@ function kernel.syscall(cmd,arg)
 		return kernel.filesystem("mkdir",arg)
 	elseif cmd == "fs_write" then
 		return kernel.filesystem("write",arg)
-	elseif cmd == "fs_rmdir" then
-		return kernel.filesystem("rmdir",arg)
 	elseif cmd == "fs_read" then
 		return kernel.filesystem("read",arg)
 	elseif cmd == "fs_lsdir" then
@@ -226,8 +290,22 @@ function kernel.init(init_program)
 	local success,err = pcall (function()
 		local __init = require(init_program);
 		--kernel.syscall("dev_clearscreen")
-		__init.main(kernel,system)
-
+		
+		local init_process = task.spawn(function()
+			__init.main(kernel,system)
+		end)
+		
+		table.insert(pids,{1,init_process,"init"})
+		
+		while true do
+			local init_running = check_process()
+			if not init_running then
+				kernel.panic("rootfs/bin/init exited.")
+				break
+			end
+			task.wait(1)
+		end
+		
 	end)
 	if not success then
 		return kernel.panic("rootfs/bin/init NOT FOUND or CAN NOT RUN\n".."[ERROR] "..err)
