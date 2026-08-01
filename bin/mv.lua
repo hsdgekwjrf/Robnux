@@ -10,7 +10,10 @@ function mv.main(_system,args)
 
 	local nowpath = sh_path .. "/" .. file
 	local newpath = sh_path .. "/" .. path
-	system.syscall("fs_mv",{nowpath,newpath})
+	local v,err = system.syscall("fs_mv",{nowpath,newpath})
+	if v == -1 then
+		system.print("Failed: "..err.."\n")
+	end
 
 end
 

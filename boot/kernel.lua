@@ -38,7 +38,7 @@ local pids = {
 local function get_new_pid()
 	local pids_table = {}
 	for i in ipairs(pids) do
-		
+
 		table.insert(pids_table,pids[i][1])
 	end
 	local returnpid = 0
@@ -63,7 +63,7 @@ end
 local function check_process()
 	local checked_init = false
 	for i=#pids,1,-1 do
-		
+
 		local status = coroutine.status(pids[i][2])
 		if status == "dead" then
 			table.remove(pids,i)
@@ -122,14 +122,14 @@ function kernel.exec(path,args)
 		else
 			__exec.main(system,args)
 		end
-		
+
 	end)
 	if not success then
 		return -1,err
 	else
 		return 0,"success"
 	end
-	
+
 end
 
 function kernel.fs_to_path(kernel_path) -- return roblox path
@@ -152,7 +152,7 @@ function kernel.fs_to_path(kernel_path) -- return roblox path
 			real_path = real_path
 		else
 			real_path = real_path:FindFirstChild(value)
-			
+
 		end
 
 	end
@@ -200,7 +200,7 @@ function kernel.create_process(path,name,args)
 	local process = task.spawn(function()
 		kernel.exec(path,args)
 	end)
-	
+
 	local pid = get_new_pid()
 	table.insert(pids,{pid,process,name})	
 	return {pid,process,name}
@@ -233,8 +233,13 @@ function kernel.filesystem(cmd,arg)
 		return script
 	elseif cmd == "mv" then
 		local file = kernel.fs_to_path(arg[1])
-		file.Parent = kernel.fs_to_path(arg[2])
-	
+		local parent = kernel.fs_to_path(arg[2])
+		if parent.ClassName ~= "Folder" then
+			return -1,"Not a Folder"
+		end
+		file.Parent = parent
+		return 0
+
 	elseif cmd == "lsdir" then
 		local _tmp = {}
 		local return_v = pcall(function()
@@ -259,7 +264,7 @@ function kernel.filesystem(cmd,arg)
 end
 
 function kernel.syscall(cmd,arg)
-		if cmd == "exec"              then return kernel.exec(arg[1],arg[2])
+	if cmd == "exec"              then return kernel.exec(arg[1],arg[2])
 	elseif cmd == "create_process"    then return kernel.create_process(arg[1],arg[2],arg[3])
 	elseif cmd == "get_process_table" then return pids
 	elseif cmd == "kill_process"      then return kernel.kill_process(arg)
@@ -284,13 +289,13 @@ function kernel.init(init_program)
 	local success,err = pcall (function()
 		local __init = require(init_program);
 		--kernel.syscall("dev_clearscreen")
-		
+
 		local init_process = task.spawn(function()
 			__init.main(kernel,system)
 		end)
-		
+
 		table.insert(pids,{1,init_process,"init"})
-		
+
 		while true do
 			local init_running = check_process()
 			if not init_running then
@@ -299,7 +304,7 @@ function kernel.init(init_program)
 			end
 			task.wait(1)
 		end
-		
+
 	end)
 	if not success then
 		return kernel.panic("rootfs/bin/init NOT FOUND or CAN NOT RUN\n".."[ERROR] "..err)
