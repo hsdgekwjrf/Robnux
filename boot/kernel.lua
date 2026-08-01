@@ -27,7 +27,7 @@ kernel.fs_root = nil
 kernel.enter_event = nil
 kernel.version = [[
 Made By BSEG
-Robnux Kernel 0.1.0, alpha.1
+Robnux Kernel 0.1.0, alpha.2
 Standard-Core
 ]]
 
