@@ -25,6 +25,11 @@ kernel.keyboard_textBox = nil
 kernel.keyboard_enter = nil
 kernel.fs_root = nil
 kernel.enter_event = nil
+kernel.version = [[
+Made By BSEG
+Robnux Kernel 0.1.0, alpha.1
+Standard-Core
+]]
 
 local pids = {
 	--{pid,process}
@@ -226,7 +231,10 @@ function kernel.filesystem(cmd,arg)
 	elseif cmd == "read" then
 		local script = kernel.fs_to_path(arg).Source
 		return script
-
+	elseif cmd == "mv" then
+		local file = kernel.fs_to_path(arg[1])
+		file.Parent = kernel.fs_to_path(arg[2])
+	
 	elseif cmd == "lsdir" then
 		local _tmp = {}
 		local return_v = pcall(function()
@@ -251,36 +259,22 @@ function kernel.filesystem(cmd,arg)
 end
 
 function kernel.syscall(cmd,arg)
-	if cmd == "exec" then
-		return kernel.exec(arg[1],arg[2])
-	elseif cmd == "create_process" then
-		return kernel.create_process(arg[1],arg[2],arg[3])
-	elseif cmd == "get_process_table" then
-		return pids
-	elseif cmd == "kill_process" then
-		return kernel.kill_process(arg)
-	elseif cmd == "fs_mk" then
-		return kernel.filesystem("mk",arg)
-	elseif cmd == "fs_rm" then
-		return kernel.filesystem("rm",arg)
-	elseif cmd ==  "fs_mkdir" then
-		return kernel.filesystem("mkdir",arg)
-	elseif cmd == "fs_write" then
-		return kernel.filesystem("write",arg)
-	elseif cmd == "fs_read" then
-		return kernel.filesystem("read",arg)
-	elseif cmd == "fs_lsdir" then
-		return kernel.filesystem("lsdir",arg)
-	elseif cmd == "dev_clearscreen" then
-		return kernel.dev("clearscreen",arg)
-	elseif cmd == "dev_getinput" then
-		return kernel.dev("getinput",arg)
-	elseif cmd == "dev_output" then
-		return kernel.dev("output",arg)
-	elseif cmd == "fs_getminpath" then
-		return kernel.filesystem("getminpath",arg)
-	else
-		return kernel.panic("Bad Syscall: \""..cmd.."\"")
+		if cmd == "exec"              then return kernel.exec(arg[1],arg[2])
+	elseif cmd == "create_process"    then return kernel.create_process(arg[1],arg[2],arg[3])
+	elseif cmd == "get_process_table" then return pids
+	elseif cmd == "kill_process"      then return kernel.kill_process(arg)
+	elseif cmd == "fs_mk"             then return kernel.filesystem("mk",arg)
+	elseif cmd == "fs_rm"             then return kernel.filesystem("rm",arg)
+	elseif cmd == "fs_mkdir"          then return kernel.filesystem("mkdir",arg)
+	elseif cmd == "fs_write"          then return kernel.filesystem("write",arg)
+	elseif cmd == "fs_read"           then return kernel.filesystem("read",arg)
+	elseif cmd == "fs_lsdir"          then return kernel.filesystem("lsdir",arg)
+	elseif cmd == "dev_clearscreen"   then return kernel.dev("clearscreen",arg)
+	elseif cmd == "dev_getinput"      then return kernel.dev("getinput",arg)
+	elseif cmd == "dev_output"        then return kernel.dev("output",arg)
+	elseif cmd == "fs_getminpath"     then return kernel.filesystem("getminpath",arg)
+	elseif cmd == "fs_mv"             then return kernel.filesystem("mv",arg)
+	else return kernel.panic("Bad Syscall: \""..cmd.."\"")	
 	end
 end
 
@@ -322,6 +316,7 @@ function kernel.kernel_init(screen_textLabel,keyboard_textBox,keyboard_enter,fs_
 	kernel.keyboard_enter = keyboard_enter
 	kernel.enter_event = kernel.keyboard_enter.MouseButton1Click
 	kernel.fs_root = fs_root
+	kernel.syscall("dev_output","Initialized devices.")
 	--kernel init
 	kernel.syscall("dev_clearscreen",0)
 	kernel.syscall("dev_output","Loading Robnux kernel...")
@@ -329,6 +324,7 @@ function kernel.kernel_init(screen_textLabel,keyboard_textBox,keyboard_enter,fs_
 		oslogo = script.Parent.oslogo.Value
 		kernel.syscall("dev_output"," [ OK ] \n")
 		--kernel.dev("output",oslogo.."\n")
+		kernel.syscall("dev_output",kernel.version .. "\n")
 	end)
 	if not success then
 		kernel.syscall("dev_output"," [FAILED] \n")

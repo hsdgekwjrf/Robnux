@@ -62,9 +62,9 @@ function cmd_runner(cmd,args)
 		local return_v,err = system.exec("rootfs/bin/"..cmd,args)
 		if return_v == -1 then
 			local return_v2,err = system.exec(sh_spawn .. "/" .. cmd,args)
-			if return_v2 then
+			if return_v2 and err ~= "success" then
 				system.print("Can not run this command: ".. cmd .."\n")
-				system.print("More information: "..err.."\n")
+				system.print("More info: "..err.."\n")
 			end
 		end
 	end
