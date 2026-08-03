@@ -27,7 +27,7 @@ kernel.fs_root = nil
 kernel.enter_event = nil
 kernel.version = [[
 Made By BSEG
-Robnux Kernel 0.1.1, alpha.1
+Robnux Kernel 0.1.1, alpha.2
 Standard-Core
 ]]
 
@@ -218,8 +218,7 @@ end
 
 function kernel.rm_last(str)
 	local path = kernel.fs_to_path(str)
-	path =path.Parent
-	return kernel.fs_get_path(path)
+	return kernel.fs_get_path(path.Parent)
 end
 
 function kernel.kill_process(pid)
@@ -254,18 +253,18 @@ end
 function kernel.filesystem(cmd,arg)
 	if cmd == "mk" then
 		local file = Instance.new("ModuleScript")
-		file.Name = arg
-		file.Parent = kernel.fs_to_path(kernel.rm_last(arg))
-		return file
+		file.Name = arg[1]
+		file.Parent = kernel.fs_to_path(arg[2])
+		return 0
 	elseif cmd == "rm" then
 		kernel.fs_to_path(arg):Remove()
 		--kernel.fs_to_path(arg).Parent = nil
 		return 0
 	elseif cmd == "mkdir" then
 		local file = Instance.new("Folder")
-		file.Name = arg
-		file.Parent = kernel.fs_to_path(arg)
-		return file
+		file.Name = arg[1]
+		file.Parent = kernel.fs_to_path(arg[2])
+		return 0
 	elseif cmd == "write_add" then
 		local script = kernel.fs_to_path(arg[1]).Source
 		kernel.fs_to_path(arg[1]).Source = script..arg[2]
@@ -284,7 +283,11 @@ function kernel.filesystem(cmd,arg)
 		end
 		file.Parent = parent
 		return 0
-
+	elseif cmd == "cp" then
+		local file = kernel.fs_to_path(arg[1]):Clone()
+		
+		file.Parent = kernel.fs_to_path(arg[2])
+		return 0
 	elseif cmd == "lsdir" then
 		local _tmp = {}
 		local return_v = pcall(function()
@@ -317,6 +320,8 @@ function kernel.syscall(cmd,arg)
 	elseif cmd == "fs_rm"             then return kernel.filesystem("rm",arg)
 	elseif cmd == "fs_mkdir"          then return kernel.filesystem("mkdir",arg)
 	elseif cmd == "fs_write"          then return kernel.filesystem("write",arg)
+	elseif cmd == "fs_write_add"      then return kernel.filesystem("write_add",arg)
+	elseif cmd == "fs_cp"             then return kernel.filesystem("cp",arg)
 	elseif cmd == "fs_read"           then return kernel.filesystem("read",arg)
 	elseif cmd == "fs_lsdir"          then return kernel.filesystem("lsdir",arg)
 	elseif cmd == "dev_clearscreen"   then return kernel.dev("clearscreen",arg)

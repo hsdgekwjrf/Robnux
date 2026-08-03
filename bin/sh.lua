@@ -25,7 +25,7 @@ function cmd_runner(cmd,args)
 	elseif cmd == "ls" then
 		local path = sh_spawn
 		if args[1] ~= nil then
-			path = args[1]
+			path = sh_spawn .. "/" .. args[1]
 		end
 		local txts = system.syscall("fs_lsdir",path)
 
@@ -53,6 +53,9 @@ function cmd_runner(cmd,args)
 		end
 
 		sh_spawn = system.syscall("fs_getminpath",sh_spawn)
+	elseif cmd == "pwd" then
+		system.print(sh_spawn.."\n")
+		
 	elseif cmd == "exit" or cmd == "quit" then
 		sign_exit = true
 	elseif cmd == "" or cmd == " " or cmd=="\n" or cmd==nil then
@@ -71,7 +74,7 @@ function cmd_runner(cmd,args)
 	return 0
 end
 
-local ver = "0.1.0 ,alpha.3"
+local ver = "0.1.0 ,alpha.4"
 
 function sh.main(_system)
 	system = _system
@@ -83,12 +86,12 @@ function sh.main(_system)
 		sh_command = system.input()
 		if sh_command == nil then
 			sh_command = ""
-			
+
 		else
-			
+
 			cmd_table = cmd_solve(sh_command)
 		end
-		
+
 		local args = {}
 		for i, value in ipairs(cmd_table) do
 			if i > 1 then
