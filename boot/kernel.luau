@@ -27,9 +27,11 @@ kernel.fs_root = nil
 kernel.enter_event = nil
 kernel.version = [[
 Made By BSEG
-Robnux Kernel 0.1.1, alpha.2
+Robnux Kernel 0.2.0, alpha.1
 Standard-Core
 ]]
+
+local user_fenv = nil
 
 local drvnum = 1
 
@@ -47,15 +49,15 @@ function kernel.drivers_call(d_id,tmp)
 	end
 	local dd = nil
 	for i,d in pairs(drivers) do
-		if d[4] == d_id then
+		if d[4] == tonumber(d_id) then
 			dd = d
 		end
 	end
 	if dd == nil then
-		
+
 		return -1,"kernel.drivers_call: d_id not found: "..d_id
 	end
-	
+
 	if dd[1] == "i_txt" then
 		return dd[2].Text
 	elseif dd[1] == "o_txt" then
@@ -79,6 +81,7 @@ end
 function kernel.reg_driver(type,rpath,name) --efi use
 	local id = drvnum
 	table.insert(drivers,{type,rpath,name,id})
+	drvnum = drvnum + 1
 	return id
 end
 
@@ -159,22 +162,28 @@ function kernel.fs_get_path(real_path) -- return os path
 end
 
 function kernel.exec(path,args)
-	local success,err = pcall(function()
-		local r_path = kernel.fs_to_path(path)
-		local __exec = require(r_path)
-		if args == nil then
-			__exec.main(system)
-		else
-			__exec.main(system,args)
-		end
-
-	end)
-	if not success then
+	local r_path = kernel.fs_to_path(path)
+	local v,code = kernel.syscall("fs_read",path)
+	if v==-1 then
+		return -2,code
+	end
+	local com,err = loadstring(code)
+	if not com then
 		return -1,err
-	else
-		return 0,"success"
+	end
+	if tostring(err) ~= "nil" then
+		return -1,err
+	end
+	local _fenv = setmetatable({}, {__index = user_fenv})
+
+	_fenv.args = args
+
+	local v,err = pcall(setfenv(com,_fenv))
+	if not v then
+		return -1,err
 	end
 
+	return 0
 end
 
 function kernel.fs_to_path(kernel_path) -- return roblox path
@@ -212,6 +221,8 @@ function kernel.panic(reason)
 	system = nil
 	kernel.dev("output","Will reboot in 3 seconds...\n")
 	task.wait(3)
+	kernel.dev("clearscreen")
+
 	kernel.kernel_init(kernel.screen_textLabel,kernel.keyboard_textBox,kernel.keyboard_enter,kernel.fs_root)
 	return -1
 end
@@ -252,11 +263,14 @@ end
 
 function kernel.filesystem(cmd,arg)
 	if cmd == "mk" then
-		local file = Instance.new("ModuleScript")
+		local file = Instance.new("StringValue")
 		file.Name = arg[1]
 		file.Parent = kernel.fs_to_path(arg[2])
 		return 0
 	elseif cmd == "rm" then
+		if kernel.fs_to_path(arg) == nil then
+			return -1,"File Not Found: "..arg
+		end
 		kernel.fs_to_path(arg):Remove()
 		--kernel.fs_to_path(arg).Parent = nil
 		return 0
@@ -266,26 +280,57 @@ function kernel.filesystem(cmd,arg)
 		file.Parent = kernel.fs_to_path(arg[2])
 		return 0
 	elseif cmd == "write_add" then
-		local script = kernel.fs_to_path(arg[1]).Source
-		kernel.fs_to_path(arg[1]).Source = script..arg[2]
-
+		local script = kernel.fs_to_path(arg[1])
+		if script == nil then
+			return -1,"File Not Found: "..arg[1]
+		end
+		if script.ClassName ~= "StringValue" then
+			return -1,"Bad File Type: "..script.ClassName
+		end
+		script.Value = script.Value .. arg[2]
+		return 0
 	elseif cmd == "write" then
-		kernel.fs_to_path(arg[1]).Source = arg[2]
-
+		local script = kernel.fs_to_path(arg[1])
+		if script == nil then
+			return -1,"File Not Found: "..arg[1]
+		end
+		if script.ClassName ~= "StringValue" then
+			return -1,"Bad File Type: "..script.ClassName
+		end
+		script.Value = arg[2]
+		return 0
 	elseif cmd == "read" then
-		local script = kernel.fs_to_path(arg).Source
-		return script
+		local script = kernel.fs_to_path(arg)
+
+		if script == nil then
+			return -1,"File Not Found: "..arg
+		end
+
+		if script.ClassName ~= "StringValue" then
+			return -1,"Bad File Type: "..script.ClassName
+		end
+		return 0,script.Value
 	elseif cmd == "mv" then
 		local file = kernel.fs_to_path(arg[1])
+		if file == nil then
+			return -1,"File Not Found: "..arg[1]
+		end
+
 		local parent = kernel.fs_to_path(arg[2])
+		if parent == nil then
+			return -1,"FolderNot Found: "..arg
+		end
 		if parent.ClassName ~= "Folder" then
 			return -1,"Not a Folder"
 		end
 		file.Parent = parent
 		return 0
 	elseif cmd == "cp" then
+		if kernel.fs_to_path(arg[1]) == nil then
+			return -1,"File Not Found: "..arg[1]
+		end
 		local file = kernel.fs_to_path(arg[1]):Clone()
-		
+
 		file.Parent = kernel.fs_to_path(arg[2])
 		return 0
 	elseif cmd == "lsdir" then
@@ -312,7 +357,7 @@ function kernel.filesystem(cmd,arg)
 end
 
 function kernel.syscall(cmd,arg)
-	    if cmd == "exec"              then return kernel.exec(arg[1],arg[2])
+	if cmd == "exec"              then return kernel.exec(arg[1],arg[2])
 	elseif cmd == "create_process"    then return kernel.create_process(arg[1],arg[2],arg[3])
 	elseif cmd == "get_process_table" then return pids
 	elseif cmd == "kill_process"      then return kernel.kill_process(arg)
@@ -338,11 +383,10 @@ function kernel.init(init_program)
 
 	kernel.syscall("dev_output","Loading init...\n")
 	local success,err = pcall (function()
-		local __init = require(init_program);
 		--kernel.syscall("dev_clearscreen")
 
 		local init_process = task.spawn(function()
-			__init.main(kernel,system)
+			kernel.exec(init_program)
 		end)
 
 		table.insert(pids,{1,init_process,"init"})
@@ -386,9 +430,9 @@ function kernel.kernel_init(screen_textLabel,keyboard_textBox,keyboard_enter,fs_
 		kernel.syscall("dev_output"," [FAILED] \n")
 		kernel.panic("Failed to load kernel.\n[ERROR] "..err)
 	end
-	kernel.syscall("dev_output","Loading library rootfs/bin/system ...\n")
+	kernel.syscall("dev_output","[INFO] Loading library rootfs/bin/system ...\n")
 	local success,err = pcall(function()
-		local __system = require(fs_root.lib.system);
+		local __system = require(kernel.fs_to_path("rootfs/lib/system"))
 		system = __system
 		system.init(kernel)
 	end)
@@ -396,8 +440,49 @@ function kernel.kernel_init(screen_textLabel,keyboard_textBox,keyboard_enter,fs_
 		kernel.panic("Failed to load rootfs/bin/system.\n[ERROR] "..err)
 	else
 		system.print(" [ OK ]\n")
+		system.print("Initializing user space...")
+
+		user_fenv = {
+			system=system,
+			string=string,
+			assert=assert,
+			buffer=buffer,
+			bit32=bit32,
+			coroutine=coroutine,
+			debug=debug,
+			error=error,
+			getmetatable=getmetatable,
+			gcinfo=gcinfo,
+			ipairs=ipairs,
+			loadstring=loadstring,
+			math=math,
+			next=next,
+			os=os,
+			pcall=pcall,
+			pairs=pairs,
+			rawlen=rawlen,
+			rawget=rawget,
+			rawset=rawset,
+			task=task,
+			table=table,
+			type=type,
+			typeof=typeof,
+			tostring=tostring,
+			tonumber=tonumber,
+			utf8=utf8,
+			unpack=unpack,
+			xpcall=xpcall,
+			_G=nil,
+			_VERSION="Lua 5.1",
+			args=nil,
+
+		}
+
+		user_fenv._G=user_fenv
+		system.print(" [ OK ]\n")
+
 	end
-	kernel.init(fs_root.bin.init)
+	kernel.init("rootfs/bin/init")
 end
 
 return kernel

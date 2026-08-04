@@ -26,7 +26,7 @@ function system.input()
 	tmp_input_sign = true
 	local str = ""
 	while tmp_input_sign do
-		
+
 		task.wait(0.1)
 		if tmp_enter_sign then
 			tmp_input_sign = false

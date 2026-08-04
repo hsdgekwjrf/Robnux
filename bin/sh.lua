@@ -1,7 +1,4 @@
-sh = {}
-system = nil
-
-local sh_spawn = "rootfs"
+local sh_spawn = "rootfs/home"
 local sign_exit = false
 
 function cmd_solve(str)
@@ -17,11 +14,34 @@ function cmd_runner(cmd,args)
 	if cmd == "clear" then
 		system.clear()
 	elseif cmd == "echo" then
-		local str = ""
-		for i, value in ipairs(args) do
-			str = str .. value .. " "
+		local redirect = false
+		for i, v in ipairs(args) do
+			if v == ">" then
+				redirect = true
+			end
 		end
-		system.print(str.."\n")
+		if redirect then
+			local str = ""
+			local file = nil
+			for i, v in ipairs(args) do
+				if v == ">" then
+					file = args[i + 1]
+					break
+				else
+					str = str .. v .. " "
+				end
+				
+			end
+			local f = sh_spawn .. "/" .. file
+				system.syscall("fs_write_add",{f,str})
+		else
+			local str = ""
+			for i, v in ipairs(args) do
+				str = str .. v .. " "
+			end
+			system.print(str.."\n")
+		end
+		
 	elseif cmd == "ls" then
 		local path = sh_spawn
 		if args[1] ~= nil then
@@ -55,7 +75,7 @@ function cmd_runner(cmd,args)
 		sh_spawn = system.syscall("fs_getminpath",sh_spawn)
 	elseif cmd == "pwd" then
 		system.print(sh_spawn.."\n")
-		
+
 	elseif cmd == "exit" or cmd == "quit" then
 		sign_exit = true
 	elseif cmd == "" or cmd == " " or cmd=="\n" or cmd==nil then
@@ -63,48 +83,42 @@ function cmd_runner(cmd,args)
 	else
 		table.insert(args,sh_spawn)
 		local return_v,err = system.exec("rootfs/bin/"..cmd,args)
-		if return_v == -1 then
+		if return_v ~= 0 then
 			local return_v2,err = system.exec(sh_spawn .. "/" .. cmd,args)
-			if return_v2 and err ~= "success" then
+			if return_v2~=0 then
 				system.print("Can not run this command: ".. cmd .."\n")
-				system.print("More info: "..err.."\n")
+				system.print(err.."\n")
 			end
 		end
 	end
 	return 0
 end
 
-local ver = "0.1.0 ,alpha.4"
+local ver = "0.1.1, alpha.1"
 
-function sh.main(_system)
-	system = _system
-	system.print("BSEG Shell version".. ver .."\n")
-	while true do
-		local cmd_table = {"",""}
-		local sh_command = ""
-		system.print(sh_spawn .." $ ")
-		sh_command = system.input()
-		if sh_command == nil then
-			sh_command = ""
+system.print("BSEG Shell version".. ver .."\n")
+while true do
+	local cmd_table = {"",""}
+	local sh_command = ""
+	system.print(sh_spawn .." $ ")
+	sh_command = system.input()
+	if sh_command == nil then
+		sh_command = ""
 
-		else
+	else
 
-			cmd_table = cmd_solve(sh_command)
-		end
-
-		local args = {}
-		for i, value in ipairs(cmd_table) do
-			if i > 1 then
-				table.insert(args,value)
-			end
-		end
-		system.print("\n")
-		cmd_runner(cmd_table[1], args)
-		if sign_exit then
-			break
-		end
+		cmd_table = cmd_solve(sh_command)
 	end
 
+	local args = {}
+	for i, v in ipairs(cmd_table) do
+		if i > 1 then
+			table.insert(args,v)
+		end
+	end
+	system.print("\n")
+	cmd_runner(cmd_table[1], args)
+	if sign_exit then
+		break
+	end
 end
-
-return sh
