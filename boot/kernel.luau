@@ -318,7 +318,7 @@ function kernel.filesystem(cmd,arg)
 
 		local parent = kernel.fs_to_path(arg[2])
 		if parent == nil then
-			return -1,"FolderNot Found: "..arg
+			return -1,"Folder Not Found: "..arg
 		end
 		if parent.ClassName ~= "Folder" then
 			return -1,"Not a Folder"
