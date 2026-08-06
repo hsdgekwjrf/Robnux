@@ -29,6 +29,10 @@ kernel.version = [[
 Made By BSEG
 Robnux Kernel 0.2.0, alpha.1
 Standard-Core
+
+This Program used the Blox Dinner Licence, protected by the BDL. 
+You need to read <github.com/hsdgekwjrf/Blox-Dinner-Licence> 
+that if you want to use the code.
 ]]
 
 local user_fenv = nil
